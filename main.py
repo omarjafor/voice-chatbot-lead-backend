@@ -45,7 +45,7 @@ class AgentResponse(BaseModel):
     is_complete: bool
     current_step: int
     validation_error: Optional[str] = None
-    should_auto_listen: bool = True  # New field to control auto-listen
+    should_auto_listen: bool = True
 
 class Lead(BaseModel):
     id: str
@@ -129,10 +129,8 @@ def process_user_message(user_message: UserMessage):
     field_name = current_field_config["field"]
     user_input = user_message.message.strip()
     
-    # Handle email confirmation
     if field_name == "email_confirm":
         if is_confirmation_positive(user_input):
-            # Reset retry count on successful confirmation
             session["email_retry_count"] = 0
             session["current_step"] += 1
             next_step = session["current_step"]
@@ -141,7 +139,7 @@ def process_user_message(user_message: UserMessage):
                 agent_message=CONVERSATION_STEPS[next_step]["question"],
                 is_complete=False,
                 current_step=next_step,
-                should_auto_listen=True  # Auto-listen enabled
+                should_auto_listen=True 
             )
         else:
             session["email_retry_count"] = session.get("email_retry_count", 0) + 1
@@ -153,7 +151,7 @@ def process_user_message(user_message: UserMessage):
                     is_complete=False,
                     current_step=1,
                     validation_error="max_retries_email",
-                    should_auto_listen=False  # Disable auto-listen
+                    should_auto_listen=False  
                 )
             
             session["current_step"] = 1
@@ -163,13 +161,12 @@ def process_user_message(user_message: UserMessage):
                 agent_message="No problem. Let's try again. What is your email address?",
                 is_complete=False,
                 current_step=1,
-                should_auto_listen=True  # Auto-listen enabled
+                should_auto_listen=True 
             )
     
-    # Handle phone confirmation
     if field_name == "phone_confirm":
         if is_confirmation_positive(user_input):
-            # Reset retry count on successful confirmation
+
             session["phone_retry_count"] = 0
             session["current_step"] += 1
             next_step = session["current_step"]
@@ -178,7 +175,7 @@ def process_user_message(user_message: UserMessage):
                 agent_message=CONVERSATION_STEPS[next_step]["question"],
                 is_complete=False,
                 current_step=next_step,
-                should_auto_listen=True  # Auto-listen enabled
+                should_auto_listen=True
             )
         else:
             session["phone_retry_count"] = session.get("phone_retry_count", 0) + 1
@@ -190,7 +187,7 @@ def process_user_message(user_message: UserMessage):
                     is_complete=False,
                     current_step=3,
                     validation_error="max_retries_phone",
-                    should_auto_listen=False  # Disable auto-listen
+                    should_auto_listen=False 
                 )
             
             session["current_step"] = 3
@@ -200,10 +197,9 @@ def process_user_message(user_message: UserMessage):
                 agent_message="No problem. Let's try again. What is your phone number?",
                 is_complete=False,
                 current_step=3,
-                should_auto_listen=True  # Auto-listen enabled
+                should_auto_listen=True 
             )
     
-    # Handle email validation
     if current_step < len(CONVERSATION_STEPS) - 1:
         if field_name == "email":
             normalized_email = normalize_email(user_input)
@@ -217,7 +213,7 @@ def process_user_message(user_message: UserMessage):
                         is_complete=False,
                         current_step=current_step,
                         validation_error="max_retries_email",
-                        should_auto_listen=False  # Disable auto-listen
+                        should_auto_listen=False 
                     )
                 
                 retry_message = f"I couldn't understand that email address. Please say it clearly, for example: john at gmail dot com. What is your email?"
@@ -227,10 +223,9 @@ def process_user_message(user_message: UserMessage):
                     is_complete=False,
                     current_step=current_step,
                     validation_error="invalid_email",
-                    should_auto_listen=True  # Auto-listen enabled for retry
+                    should_auto_listen=True 
                 )
             
-            # Reset retry count on successful validation
             session["email_retry_count"] = 0
             user_input = normalized_email
             session["data"][field_name] = user_input
@@ -243,10 +238,9 @@ def process_user_message(user_message: UserMessage):
                 agent_message=confirmation_message,
                 is_complete=False,
                 current_step=next_step,
-                should_auto_listen=True  # Auto-listen enabled for confirmation
+                should_auto_listen=True 
             )
         
-        # Handle phone validation
         elif field_name == "phone":
             normalized_phone = normalize_phone(user_input)
             if not is_valid_phone(normalized_phone):
@@ -259,7 +253,7 @@ def process_user_message(user_message: UserMessage):
                         is_complete=False,
                         current_step=current_step,
                         validation_error="max_retries_phone",
-                        should_auto_listen=False  # Disable auto-listen
+                        should_auto_listen=False
                     )
                 
                 retry_message = f"I couldn't get a valid phone number. Please say your 10-digit phone number clearly. What is your phone number?"
@@ -269,10 +263,9 @@ def process_user_message(user_message: UserMessage):
                     is_complete=False,
                     current_step=current_step,
                     validation_error="invalid_phone",
-                    should_auto_listen=True  # Auto-listen enabled for retry
+                    should_auto_listen=True  
                 )
             
-            # Reset retry count on successful validation
             session["phone_retry_count"] = 0
             user_input = normalized_phone
             session["data"][field_name] = user_input
@@ -288,14 +281,12 @@ def process_user_message(user_message: UserMessage):
                 should_auto_listen=True 
             )
         
-        # Handle other fields (name, interest)
         else:
             session["data"][field_name] = user_input
     
     session["current_step"] += 1
     next_step = session["current_step"]
     
-    # Check if conversation is complete
     if next_step == 6:
         lead = {
             "id": str(uuid.uuid4()),
@@ -313,7 +304,7 @@ def process_user_message(user_message: UserMessage):
             agent_message=CONVERSATION_STEPS[-1]["question"],
             is_complete=True,
             current_step=next_step,
-            should_auto_listen=False  # No auto-listen when complete
+            should_auto_listen=False 
         )
     
     return AgentResponse(
@@ -321,17 +312,15 @@ def process_user_message(user_message: UserMessage):
         agent_message=CONVERSATION_STEPS[next_step]["question"],
         is_complete=False,
         current_step=next_step,
-        should_auto_listen=True  # Auto-listen enabled
+        should_auto_listen=True 
     )
 
 @app.get("/api/leads", response_model=List[Lead])
 def get_all_leads():
-    """Retrieve all collected leads"""
     return leads
 
 @app.get("/api/leads/{lead_id}", response_model=Lead)
 def get_lead(lead_id: str):
-    """Retrieve a specific lead by ID"""
     for lead in leads:
         if lead["id"] == lead_id:
             return lead
